@@ -1,6 +1,7 @@
 package com.example.wordreferenceapp;
 
 import android.os.Bundle;
+
 import com.actionbarsherlock.app.SherlockActivity;
 import com.actionbarsherlock.view.Menu;
 

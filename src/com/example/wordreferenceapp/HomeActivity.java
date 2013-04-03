@@ -6,16 +6,21 @@ import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.app.ActionBar;
 
 public class HomeActivity extends SherlockActivity {
+	private WordReferenceDictionary dictionary;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
+		try {
+			this.dictionary = new WordReferenceDictionary(Language.ENGLISH, Language.SPANISH);
+		} catch (CombinationNotAvailableException e) {
+		}
+		
 		ActionBar bar = getSupportActionBar();
 		bar.setDisplayShowTitleEnabled(false);
 		
 		setContentView(R.layout.home);
-
 	}
 
 	@Override
