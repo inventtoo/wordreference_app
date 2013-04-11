@@ -5,14 +5,22 @@
     <string name="action_search">Search</string>
     <string name="action_view_external">View original</string>
     <string name="app_name">WordReference</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="more">More...</string>
     <string name="msg_conn_unavailable">Connection unavailable</string>
+    <string name="msg_dict_not_specified">Dictionary not specified</string>
     <string name="msg_error_unknown">Error unknown</string>
     <string name="msg_network_timeout">Network timeout</string>
     <string name="msg_server_error">Server error</string>
+    <string name="pick_dict_button_title">Choose one</string>
     <string name="retry_button_title">Retry</string>
     <string name="search_hint">Search WordReference</string>
     <string name="title_activity_recent">Recent</string>
     <string name="title_activity_search">SearchActivity</string>
     <string name="toast_conn_unavailable">Connection unavailable</string>
+    <string name="translate_from">Translate from?</string>
+    <string name="translate_from_lang_to">Translate from %1$s to?</string>
+    <string name="translate_from_lang_to_lang">Translate from %1$s to %2$s</string>
 
 </resources>

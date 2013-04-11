@@ -16,29 +16,7 @@
 		android:layout_height="fill_parent"
 		android:layout_gravity="center"
 		android:visibility="gone" />
-
-	<LinearLayout 
-		android:id="@+id/error_display"
-		android:orientation="vertical"
-		android:layout_width="fill_parent"
-		android:layout_height="fill_parent"
-		android:gravity="center"
-		android:visibility="gone">
-
-		<TextView
-		    android:id="@+id/error_msg"
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:textSize="20sp" />
-		
-		<Button android:id="@+id/retry_button"  
-			android:layout_width="wrap_content"  
-			android:layout_height="wrap_content"  
-			android:onClick="retrySearch"
-			android:text="@string/retry_button_title"/> 
-
-	</LinearLayout>
-
+	
 	<TextView
 		android:id="@+id/term_searched"
 		android:layout_width="wrap_content"
@@ -48,5 +26,7 @@
 		android:id="@+id/translation_overview"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content" />
+	
+    <include layout="@layout/error_display" />
 
 </LinearLayout>

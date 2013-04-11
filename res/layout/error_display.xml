@@ -1,0 +1,21 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/error_display"
+	android:orientation="vertical"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:gravity="center"
+	android:visibility="gone">
+
+	<TextView
+	    android:id="@+id/error_msg"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:textSize="20sp" />
+	
+	<Button android:id="@+id/action_button"  
+		android:layout_width="wrap_content"  
+		android:layout_height="wrap_content"  
+		android:onClick="actionOnError"
+		android:text="@string/retry_button_title"/> 
+
+</LinearLayout>

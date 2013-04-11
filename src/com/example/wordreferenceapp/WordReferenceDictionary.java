@@ -21,19 +21,89 @@ public class WordReferenceDictionary extends LanguageDictionary {
 		"http://www.wordreference.com/2012/autocomplete.aspx?dict={dict}&query={word}";
 	private static final String SPELL_URL = 
 		"http://spell.wordreference.com/spell/spelljs.php?dict={dict}&w={word}";
+	
+	private static final Language[][] AVAILABLE_COMBINATIONS = {
+		/* SPANISH */
+		{ Language.ENGLISH, Language.SPANISH },
+		{ Language.SPANISH, Language.ENGLISH },
+		{ Language.FRENCH, Language.SPANISH },
+		{ Language.SPANISH, Language.FRENCH },
+		{ Language.PORTUGUESE, Language.SPANISH },
+		{ Language.SPANISH, Language.PORTUGUESE },
+		/* FRENCH */
+		{ Language.FRENCH, Language.ENGLISH },
+		{ Language.ENGLISH, Language.FRENCH },
+		/* ITALIAN */
+		{ Language.ITALIAN, Language.ENGLISH },
+		{ Language.ENGLISH, Language.ITALIAN },
+		/* GERMAN */
+		{ Language.GERMAN, Language.ENGLISH },
+		{ Language.ENGLISH, Language.GERMAN },
+		/* RUSSIAN */
+		{ Language.RUSSIAN, Language.ENGLISH },
+		{ Language.ENGLISH, Language.RUSSIAN },
+		/* PORTUGUESE */
+		{ Language.PORTUGUESE, Language.ENGLISH },
+		{ Language.ENGLISH, Language.PORTUGUESE },
+		/* POLISH */
+		{ Language.POLISH, Language.ENGLISH },
+		{ Language.ENGLISH, Language.POLISH },
+		/* ROMANIAN */
+		{ Language.ROMANIAN, Language.ENGLISH },
+		{ Language.ENGLISH, Language.ROMANIAN },
+		/* CZECH */
+		{ Language.CZECH, Language.ENGLISH },
+		{ Language.ENGLISH, Language.CZECH },
+		/* GREEK */
+		{ Language.GREEK, Language.ENGLISH },
+		{ Language.ENGLISH, Language.GREEK },
+		/* TURKISH */
+		{ Language.TURKISH, Language.ENGLISH },
+		{ Language.ENGLISH, Language.TURKISH },
+		/* CHINESE */
+		{ Language.CHINESE, Language.ENGLISH },
+		{ Language.ENGLISH, Language.CHINESE },
+		/* JAPANESE */
+		{ Language.JAPANESE, Language.ENGLISH },
+		{ Language.ENGLISH, Language.JAPANESE },
+		/* KOREAN */
+		{ Language.KOREAN, Language.ENGLISH },
+		{ Language.ENGLISH, Language.KOREAN },
+		/* ARABIC */
+		{ Language.ARABIC, Language.ENGLISH },
+		{ Language.ENGLISH, Language.ARABIC },
+	};
 
 	public WordReferenceDictionary(Language fromLanguage, Language toLanguage) 
 		throws CombinationNotAvailableException  {
 		super(fromLanguage, toLanguage);
+/*
+		WordReferenceDictionary[] dictionaries = 
+			WordReferenceDictionary.AVAILABLE_DICTIONARIES;
 
-		if (fromLanguage == toLanguage) {
-			throw new CombinationNotAvailableException("Languages must be different");
+		for (WordReferenceDictionary dictionary : dictionaries) {
+			if (dictionary.equals(this)) {
+				return;
+			}
 		}
-		if (fromLanguage != Language.ENGLISH && toLanguage != Language.ENGLISH) {
-			throw new CombinationNotAvailableException("One of the languages must be English");
-		}
+
+		throw new CombinationNotAvailableException();
+		*/
 	}
-
+	
+	public static List<Language> availableCombinationsWithSource(Language language) {
+		List<Language> languages = new ArrayList<Language>();
+		
+		Language[][] combinations = AVAILABLE_COMBINATIONS;
+		int numComb = combinations.length;
+		for (int n = 0; n < numComb; ++n) {
+			if (combinations[n][0] == language) {
+				languages.add(combinations[n][1]);
+			}
+		}
+		
+		return languages;
+	}
 
 	@Override
 	public List<DictionaryTerm> getHints(String query) throws IOException {
@@ -134,5 +204,10 @@ public class WordReferenceDictionary extends LanguageDictionary {
 		} 
 
 		return null;
+	}
+
+	public String toString() {
+		return String.format("%s>%s", 
+				mFromLanguage.code().toUpperCase(), mToLanguage.code().toUpperCase());
 	}
 }

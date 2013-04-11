@@ -17,6 +17,10 @@ public abstract class LanguageDictionary {
 		mToLanguage = toLanguage;
 	}
 
+	public boolean equals(LanguageDictionary d) {
+		return d.mFromLanguage == mFromLanguage && d.mToLanguage == d.mToLanguage;
+	}
+
 	/** Returns possible candidate terms in the dictionary for the query specified. */
 	public abstract List<DictionaryTerm> getHints(String query) throws IOException;
 

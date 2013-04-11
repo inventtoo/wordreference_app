@@ -1,21 +1,41 @@
 package com.example.wordreferenceapp;
 
 public enum Language {
-	ENGLISH("en"), 
-		SPANISH("es"), 
+		ARABIC("ar"),
+		CHINESE("zh"),
+		CZECH("cz"),
+		ENGLISH("en"), 
 		FRENCH("fr"), 
-		ITALIAN("it"), 
 		GERMAN("de"), 
-		PORTUGUESE("pt");
+		GREEK("gr"),
+		ITALIAN("it"), 
+		JAPANESE("ja"),
+		KOREAN("ko"),
+		POLISH("pl"),
+		PORTUGUESE("pt"),
+		ROMANIAN("ro"),
+		RUSSIAN("ru"),
+		SPANISH("es"), 
+		TURKISH("tr");
 
-	private final String language;
+	private final String mLanguage;
 
 	private Language(String language) {
-		this.language = language;
+		mLanguage = language;
 	}
 
 	public String code() {
-		return this.language;
+		return mLanguage;
+	}
+	
+	public String isocode() {
+		if (this == GREEK) {
+			return "el";
+		} else if (this == CZECH) {
+			return "cs";
+		} else {
+			return code();
+		}
 	}
 
 	public static Language fromString(String text) {
