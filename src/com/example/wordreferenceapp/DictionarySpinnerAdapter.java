@@ -25,13 +25,12 @@ public class DictionarySpinnerAdapter extends BaseAdapter {
 		mData = objects;
 	}
 	
-	private View getSentinelView(View convertView, ViewGroup parent) {
+	private View getFooterView(View convertView) {
 		if (convertView == null) {
-			convertView = mInflater.inflate(
-					android.R.layout.simple_list_item_1, null);
+			convertView = mInflater.inflate(android.R.layout.simple_list_item_1, null);
 		}
-		TextView textView = (TextView) convertView.findViewById(android.R.id.text1);
-		textView.setText(R.string.more);
+		TextView tv = (TextView) convertView.findViewById(android.R.id.text1);
+		tv.setText(R.string.more);
 		
 		return convertView;
 	}
@@ -39,15 +38,15 @@ public class DictionarySpinnerAdapter extends BaseAdapter {
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		if (position+1 == getCount()) {
-			return getSentinelView(convertView, parent);
+			return getFooterView(convertView);
 		}
 
 		if (convertView == null) {
 			convertView = mInflater.inflate(android.R.layout.simple_list_item_1, null);
 		} 
 		
-		TextView textView = (TextView) convertView.findViewById(android.R.id.text1);
-		textView.setText(mData.get(position).toString());
+		TextView tv = (TextView) convertView.findViewById(android.R.id.text1);
+		tv.setText(mData.get(position).toString());
 
 		return convertView;
 	}
@@ -59,12 +58,12 @@ public class DictionarySpinnerAdapter extends BaseAdapter {
 
 	@Override
 	public int getCount() {
-		return mData.size();
+		return mData.size()+1;
 	}
 
 	@Override
 	public Object getItem(int position) {
-		return mData.get(position);
+		return (position < mData.size()) ? mData.get(position) : null;
 	}
 
 	@Override

@@ -1,0 +1,17 @@
+<resources>
+	<!-- Nice colors extracted from http://www.colorcombos.com -->
+	<array name="colors">
+		<item>#dd1e2f</item> <!-- alizarin crimson: red -->
+		<item>#ebb035</item> <!-- tulip tree: yellow orange -->
+		<item>#06a2cb</item> <!-- cerulean: light blue -->
+		<item>#218559</item> <!-- eucalyptus: green blue -->
+		<item>#192823</item> <!-- aztec: blue green -->
+		<item>#a84a5c</item> <!-- hippie pink: red -->
+		<item>#9e3b33</item> <!-- red stiletto -->
+		<item>#eb8540</item> <!-- jaffa: orange red -->
+		<item>#c3d938</item> <!-- pear: yellow green -->
+		<item>#98c5ab</item> <!-- green blue: shadow green -->
+		<item>#153450</item> <!-- blue elephant: midnight blue -->
+		<item>#5f9ea0</item> <!-- breaker bay: light blue -->
+	</array>
+</resources>

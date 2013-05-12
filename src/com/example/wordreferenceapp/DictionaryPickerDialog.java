@@ -38,7 +38,6 @@ public class DictionaryPickerDialog extends DialogFragment
 		class LanguageItem {
 			Language language;
 			Bitmap flag;
-			String name;
 			boolean selected;
 			boolean enabled;
 		}
@@ -68,11 +67,20 @@ public class DictionaryPickerDialog extends DialogFragment
 					item.flag = null;
 				}
 				item.language = languages[i];
-				item.name = (new Locale(isocode)).getDisplayLanguage(Locale.getDefault());
 				
 				mLanguageItems[i] = item;
 			}
 			clear();
+		}
+		
+		@Override
+		public boolean areAllItemsEnabled() {
+			return false;
+		}
+		
+		@Override
+		public boolean isEnabled(int position) {
+			return mLanguageItems[position].enabled;
 		}
 
 		@Override
@@ -102,42 +110,39 @@ public class DictionaryPickerDialog extends DialogFragment
 		/** Select a maximum of two items and return true if the item is actually toggled. */
 		public boolean toggleSelected(int position) {
 			boolean toggled = false;
+			LanguageItem item = mLanguageItems[position];
 
-			if (position < mLanguageItems.length) {
-				LanguageItem item = mLanguageItems[position];
-
-				if (item.selected) {
-					/* deselect target language */
-					if (mNumberSelectedItems == 2 && item == mTargetLanguage) {
-						mTargetLanguage = null;
-						item.selected = false;
-						mNumberSelectedItems--;
-						toggled = true;
+			if (item.selected) {
+				/* deselect target language */
+				if (mNumberSelectedItems == 2 && item == mTargetLanguage) {
+					mTargetLanguage = null;
+					item.selected = false;
+					mNumberSelectedItems--;
+					toggled = true;
 					/* deselect source language -> restart */
-					} else if (mNumberSelectedItems == 1) {
-						clear();
-						toggled = true;
+				} else if (mNumberSelectedItems == 1) {
+					clear();
+					toggled = true;
+				}
+			} else {
+				item.selected = true;
+				/* select source language */
+				if (mNumberSelectedItems == 0) {
+					mSourceLanguage = item;
+					mNumberSelectedItems = 1;
+					disableIncompatibleLanguages(item.language);
+					toggled = true;
+				} else {
+					/* select target language */
+					if (mTargetLanguage != null) {
+						/* deselect previous one */
+						mTargetLanguage.selected = false;
 					}
-				} else if (item.enabled) {
-					item.selected = true;
-					/* select source language */
-					if (mNumberSelectedItems == 0) {
-						mSourceLanguage = item;
-						mNumberSelectedItems = 1;
-						disableIncompatibleLanguages(item.language);
-						toggled = true;
-					} else {
-						/* select target language */
-						if (mTargetLanguage != null) {
-							/* deselect previous one */
-							mTargetLanguage.selected = false;
-						}
-						mTargetLanguage = item;
-						mNumberSelectedItems = 2;
-						toggled = true;
-					}
-				} 
-			}
+					mTargetLanguage = item;
+					mNumberSelectedItems = 2;
+					toggled = true;
+				}
+			} 
 
 			if (toggled) {
 				notifyDataSetChanged();
@@ -150,16 +155,8 @@ public class DictionaryPickerDialog extends DialogFragment
 			return (mSourceLanguage != null) ? mSourceLanguage.language : null;
 		}
 
-		public String getSourceLanguageName() {
-			return (mSourceLanguage != null) ? mSourceLanguage.name : null;
-		}
-
 		public Language getTargetLanguage() {
 			return (mTargetLanguage != null) ? mTargetLanguage.language : null;
-		}
-
-		public String getTargetLanguageName() {
-			return (mTargetLanguage != null) ? mTargetLanguage.name : null;
 		}
 
 		@Override
@@ -176,19 +173,19 @@ public class DictionaryPickerDialog extends DialogFragment
 				holder = (ViewHolder) convertView.getTag();
 			}
 
-			holder.language.setText(mLanguageItems[position].name);
-			holder.flag.setImageBitmap(mLanguageItems[position].flag);
-			ViewGroup parentView = (ViewGroup) holder.flag.getParent();
-			if (mLanguageItems[position].selected) {
-				parentView.setBackgroundResource(android.R.color.holo_blue_light);
+			LanguageItem item = mLanguageItems[position];
+			holder.language.setText(item.language.toString());
+			holder.flag.setImageBitmap(item.flag);
+			if (item.selected) {
+				convertView.setBackgroundResource(android.R.color.holo_blue_light);
 			} else {
-				parentView.setBackgroundResource(0);
+				convertView.setBackgroundResource(0);
 			}
-			if (mLanguageItems[position].enabled) {
-				holder.flag.clearColorFilter();
+			holder.language.setEnabled(item.enabled);
+			if (item.enabled) {
+				holder.flag.getDrawable().setAlpha(255);
 			} else {
-				// TODO: fix issue with flags background when fading to light grey
-				holder.flag.setColorFilter(Color.LTGRAY, PorterDuff.Mode.LIGHTEN);
+				holder.flag.getDrawable().setAlpha(55);
 			}
 
 			return convertView;
@@ -280,23 +277,22 @@ public class DictionaryPickerDialog extends DialogFragment
 	}
 
 	public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
-		/* the item was actually selected/deselected */
 		if (mAdapter.toggleSelected(position)) {
+			/* the item was actually selected/deselected */
 			Language sourceLanguage = mAdapter.getSourceLanguage();
 			Language targetLanguage = mAdapter.getTargetLanguage();
-			String sourceName = mAdapter.getSourceLanguageName();
-			String targetName = mAdapter.getTargetLanguageName();
 			AlertDialog dialog = (AlertDialog) getDialog();
 
 			if (targetLanguage != null) {
 				String titleHolder = 
 					getResources().getString(R.string.translate_from_lang_to_lang);
-				dialog.setTitle(String.format(titleHolder, sourceName, targetName));
+				dialog.setTitle(String.format(titleHolder, sourceLanguage.toString(), 
+						targetLanguage.toString()));
 				dialog.getButton(Dialog.BUTTON_POSITIVE).setEnabled(true);
 			} else if (sourceLanguage != null) {
 				String titleHolder = 
 					getResources().getString(R.string.translate_from_lang_to);
-				dialog.setTitle(String.format(titleHolder, sourceName));
+				dialog.setTitle(String.format(titleHolder, sourceLanguage.toString()));
 				dialog.getButton(Dialog.BUTTON_POSITIVE).setEnabled(false);
 			} else {
 				String title = getResources().getString(R.string.translate_from);

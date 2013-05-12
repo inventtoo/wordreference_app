@@ -1,5 +1,7 @@
 package com.example.wordreferenceapp;
 
+import java.util.Locale;
+
 public enum Language {
 		ARABIC("ar"),
 		CHINESE("zh"),
@@ -47,6 +49,10 @@ public enum Language {
 			}
 		}
 		return null;
+	}
+	
+	public String toString() {
+		return (new Locale(isocode())).getDisplayLanguage(Locale.getDefault());
 	}
 };
 

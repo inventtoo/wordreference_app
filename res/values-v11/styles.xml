@@ -10,7 +10,7 @@
     </style>
     
     <style name="AppTheme.ActionBar" parent="Widget.Sherlock.Light.ActionBar.Solid">
-        <item name="android:displayOptions"></item>
+        <item name="android:displayOptions">showHome</item>
 	</style>
 
 </resources>

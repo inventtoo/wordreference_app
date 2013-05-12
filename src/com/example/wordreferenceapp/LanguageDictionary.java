@@ -7,6 +7,7 @@ public abstract class LanguageDictionary {
 
 	/** Perform the search in the opposite direction if no results are found */
 	public static final int REVERSE_SEARCH_IF_POSSIBLE = 1;
+	public static final int CATEGORY_DEFAULT = -1;
 
 	protected Language mFromLanguage;
 	protected Language mToLanguage;

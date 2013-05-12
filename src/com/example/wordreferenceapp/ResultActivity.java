@@ -7,6 +7,8 @@ import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.AssetManager;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -14,28 +16,39 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.ListFragment;
+import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.actionbarsherlock.app.ActionBar;
+import com.actionbarsherlock.app.ActionBar.Tab;
 import com.actionbarsherlock.app.SherlockFragmentActivity;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.actionbarsherlock.widget.SearchView;
+import com.commonsware.cwac.merge.MergeAdapter;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 class SearchDictionaryTask extends AsyncTask<String, Void, DictionaryResult> {
@@ -96,13 +109,26 @@ class SearchDictionaryTask extends AsyncTask<String, Void, DictionaryResult> {
 }
 
 public class ResultActivity extends SherlockFragmentActivity 
-	implements AsyncTaskCompleteListener<DictionaryResult>, OnItemSelectedListener,
-	DictionaryPickerDialog.DictionaryPickerListener {
+	implements 
+	AsyncTaskCompleteListener<DictionaryResult>, 
+	DictionaryPickerDialog.DictionaryPickerListener,
+	OnItemSelectedListener,
+	ActionBar.TabListener {
 
 	private WordReferenceDictionary mDictionary = null;
 	private DictionaryResult mResult = null;
 	private String mQuery = null;
-	private int mSavedSpinnerPosition;
+	private ApplicationError mError = ApplicationError.OK;
+	private int mSavedSpinnerPosition = -1;
+	private ListAdapter[] mAdapters;
+	private ListFragment[] mFragments;
+	private int mCurSelectedTab = -1;
+
+	private static final String KEY_RESULT = "com.example.wordreferenceapp.RESULT";
+	private static final String KEY_TAB_SELECTED = "com.example.wordreferenceapp.TAB_SELECTED";
+	private static final String KEY_ERROR = "com.example.wordreferenceapp.ERROR";
+	private static final String KEY_QUERY = "com.example.wordreferenceapp.QUERY";
+	private static final String KEY_DICTIONARY = "com.example.wordreferenceapp.DICTIONARY";
 
 	private static final String ACTION_BUTTON_RETRY = "retry";
 	private static final String ACTION_BUTTON_PICK_DICT = "pick_dict";
@@ -118,15 +144,34 @@ public class ResultActivity extends SherlockFragmentActivity
 			dialog.show(getSupportFragmentManager(), "DictionaryPickerDialog");
 		}
 
-		ActionBar bar = getSupportActionBar();
-		bar.setCustomView(getDictionarySpinner());
-		bar.setDisplayShowCustomEnabled(true);
+		ActionBar actionBar = getSupportActionBar();
+		actionBar.setCustomView(getDictionarySpinner());
+		actionBar.setDisplayShowCustomEnabled(true);
 
 		Intent intent = getIntent();
-		if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+		if (savedInstanceState != null && 
+				savedInstanceState.containsKey(KEY_RESULT)) {
+			setContentView(R.layout.result);
+			mResult = savedInstanceState.getParcelable(KEY_RESULT);
+			loadResult();
+			int selectedTab = savedInstanceState.getInt(KEY_TAB_SELECTED, -1);
+			if (selectedTab != -1) {
+				actionBar.setSelectedNavigationItem(selectedTab);
+			}
+		} else if (savedInstanceState != null && 
+				savedInstanceState.containsKey(KEY_ERROR)) {
+			setContentView(R.layout.result);
+			mQuery = savedInstanceState.getString(KEY_QUERY);
+			ApplicationError error = savedInstanceState.getParcelable(KEY_ERROR);
+			showErrorDisplay(error);
+		} else if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
 			setContentView(R.layout.result);
 			mQuery = intent.getStringExtra(SearchManager.QUERY);
-			doSearch();
+			if (intent.hasExtra(KEY_DICTIONARY)) {
+				doSearch((LanguageDictionary) intent.getParcelableExtra(KEY_DICTIONARY));
+			} else {
+				doSearch();
+			}
 		} else if (Intent.ACTION_MAIN.equals(intent.getAction())) {
 			setContentView(R.layout.home);
 			if (!connectionAvailable()) {
@@ -143,26 +188,45 @@ public class ResultActivity extends SherlockFragmentActivity
 		}
 	}
 	
-	/* Called when an item is selected on the dictionary spinner */
 	public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-		if (pos+1 < parent.getCount()) {
-			if (mSavedSpinnerPosition >= 0) {
-				WordReferenceDictionary dictionary = 
-						(WordReferenceDictionary) parent.getItemAtPosition(pos);
-				PreferencesManager prefManager = 
-						PreferencesManager.getInstance(getApplicationContext());
-				prefManager.setDefaultDictionary(dictionary);
-				
-				showCurrentDictionary();
+		if (parent.getId() == R.id.dictionaries) {
+			
+			WordReferenceDictionary dictionary = 
+					(WordReferenceDictionary) parent.getItemAtPosition(pos);
+			
+			if (dictionary != null) {
+				if (mSavedSpinnerPosition >= 0) {
+					PreferencesManager prefManager = 
+							PreferencesManager.getInstance(getApplicationContext());
+					prefManager.setDefaultDictionary(dictionary);
+
+					showCurrentDictionary();
+				}
+				mSavedSpinnerPosition = pos;
+			} else {
+				int savedPosition = mSavedSpinnerPosition;
+				mSavedSpinnerPosition = -1;
+				parent.setSelection(savedPosition);
+				/* More... */
+				DialogFragment dialog = new DictionaryPickerDialog();
+				dialog.show(getSupportFragmentManager(), "DictionaryPickerDialog");
 			}
-			mSavedSpinnerPosition = pos;
-		} else {
-			int savedPosition = mSavedSpinnerPosition;
-			mSavedSpinnerPosition = -1;
-			parent.setSelection(savedPosition);
-			/* More... */
-			DialogFragment dialog = new DictionaryPickerDialog();
-			dialog.show(getSupportFragmentManager(), "DictionaryPickerDialog");
+		} else if (parent.getId() == R.id.languages) {
+			
+			Language toLanguage = (Language) parent.getItemAtPosition(pos);
+			if (toLanguage != mResult.toLanguage) {
+				try {
+					WordReferenceDictionary newDict = 
+							new WordReferenceDictionary(mResult.fromLanguage, toLanguage);
+
+					Intent intent = new Intent(this, ResultActivity.class);
+					intent.setAction(Intent.ACTION_SEARCH);
+					intent.putExtra(SearchManager.QUERY, mResult.term);
+					intent.putExtra(KEY_DICTIONARY, newDict);
+					startActivity(intent);
+				} catch (CombinationNotAvailableException cnae) {
+				}
+			} 
 		}
 	}
 
@@ -177,8 +241,6 @@ public class ResultActivity extends SherlockFragmentActivity
 		if (mDictionary != null) {
 			List<LanguageDictionary> dictionaries = new ArrayList<LanguageDictionary>();
 			dictionaries.add(mDictionary);
-			/* the last item acts as a sentinel object to show dictionary picker dialog */
-			dictionaries.add(null);
 
 			mSavedSpinnerPosition = -1;
 
@@ -203,12 +265,16 @@ public class ResultActivity extends SherlockFragmentActivity
 
 		return dictionary;
 	}
-
+	
 	private void doSearch() {
+		doSearch(mDictionary);
+	}
+	
+	private void doSearch(LanguageDictionary dictionary) {
 		if (connectionAvailable()) {
-			if (mDictionary != null) {
+			if (dictionary != null) {
 				SearchDictionaryTask searchTask = 
-					new SearchDictionaryTask(this, mDictionary, 0);
+					new SearchDictionaryTask(this, dictionary, 0);
 				searchTask.execute(mQuery);
 			} else {
 				showErrorDisplay(ApplicationError.DICT_NOT_SPECIFIED);
@@ -255,6 +321,8 @@ public class ResultActivity extends SherlockFragmentActivity
 
 			errorDisplay.setVisibility(View.VISIBLE);
 		}
+
+		mError = error;
 	}
 
 	private boolean connectionAvailable() {
@@ -264,29 +332,6 @@ public class ResultActivity extends SherlockFragmentActivity
 		return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
 	}
 	
-	/*
-	private void showKeyboard(MenuItem menu) {
-		menu.setOnActionExpandListener(new OnActionExpandListener() {
-	        @Override
-	        public boolean onMenuItemActionCollapse(MenuItem item) {
-	            // Do something when collapsed
-	            return true;  // Return true to collapse action view
-	        }
-
-	        @Override
-	        public boolean onMenuItemActionExpand(MenuItem item) {
-	            //get focus
-	            item.getActionView().requestFocus();
-	            //get input method
-	            InputMethodManager imm = 
-	            		(InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-	            imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
-	            return true;  // Return true to expand action view
-	        }
-	    });
-	}
-	*/
-
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -296,12 +341,13 @@ public class ResultActivity extends SherlockFragmentActivity
 		MenuItem searchMenu = menu.findItem(R.id.action_search);
 		SearchView searchView = (SearchView) searchMenu.getActionView();
 		searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+		searchView.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS 
+				| InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
 		
 		if (Intent.ACTION_MAIN.equals(getIntent().getAction())) {
 			if (mDictionary != null && connectionAvailable()) {
 				searchMenu.expandActionView();
 				showCurrentDictionary();
-				//showKeyboard(searchMenu);
 			} 
 		}
 
@@ -336,22 +382,161 @@ public class ResultActivity extends SherlockFragmentActivity
 		if (tag.equals(ACTION_BUTTON_RETRY)) {
 			doSearch();	
 		} else if (tag.equals(ACTION_BUTTON_PICK_DICT)) {
-				/* More... */
+			/* More... */
 			DialogFragment dialog = new DictionaryPickerDialog();
 			dialog.show(getSupportFragmentManager(), "DictionaryPickerDialog");
 		}
 	}
+
+	protected void onSaveInstanceState(Bundle outState) {
+		if (mError != ApplicationError.OK) {
+			outState.putParcelable(KEY_ERROR, mError);
+			if (mQuery != null) {
+				outState.putString(KEY_QUERY, mQuery);
+			}
+		} else if (mResult != null) {
+			outState.putParcelable(KEY_RESULT, mResult);
+			if (mCurSelectedTab != -1) {
+				outState.putInt(KEY_TAB_SELECTED, mCurSelectedTab);
+			}
+		}
+	}
 	
 	private void loadResult() {
-		TextView term = (TextView) findViewById(R.id.term_searched);
-		TextView translations = (TextView) findViewById(R.id.translation_overview);
+		class LanguageListAdapter extends ArrayAdapter<Language> {
+			private int mFixedPosition;
+			
+			public LanguageListAdapter(Context context, int textViewResourceId, 
+					List<Language> objects, int fixedPosition) {
+				super(context, textViewResourceId, objects);
+				mFixedPosition = fixedPosition;
+			}
+			
+			private View getCustomView(int position, View convertView, ViewGroup parent) {
+				TextView tv = (TextView) super.getView(position, convertView, parent);
+				
+				AssetManager am = getContext().getAssets();
+				Language language = getItem(position);
+				InputStream stream = null;
+				try {
+					stream = am.open("flags/32/" + language.code() + ".png");
+					BitmapDrawable drawable = new BitmapDrawable(getContext().getResources(), stream);
+					tv.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null);
+					tv.setCompoundDrawablePadding(6);
+				} catch (IOException ioe) {
+				} finally {
+					if (stream != null){
+						try {
+							stream.close();
+						} catch (IOException e) {
+						}
+					}
+				}
+				return tv;
+			}
+			
+			@Override
+			public View getView(int position, View convertView, ViewGroup parent) {
+				return getCustomView(mFixedPosition, convertView, parent);
+			}
+			
+			@Override
+			public View getDropDownView(int position, View convertView, ViewGroup parent) {
+				return getCustomView(position, convertView, parent);
+			}
+		}
+		TextView tv = (TextView) findViewById(R.id.term);
+		tv.setText(mResult.term);
+		List<Language> languages = 
+				WordReferenceDictionary.availableCombinationsWithSource(mResult.fromLanguage);
+		
+		Spinner sp = (Spinner) findViewById(R.id.languages);
+		int languageSelected = languages.indexOf(mResult.toLanguage);
+		sp.setAdapter(new LanguageListAdapter(this, R.layout.language_spinner_item, 
+				languages, languageSelected));	
+		sp.setOnItemSelectedListener(this);
+		sp.setSelection(languageSelected);
+		sp.setEnabled(languages.size() > 1);
+		
+		Iterator<DictionaryEntryBlock> principal = 
+				mResult.iterator(WordReferenceDictionary.CATEGORY_PRINCIPAL);
+		Iterator<DictionaryEntryBlock> additional = 
+				mResult.iterator(WordReferenceDictionary.CATEGORY_ADDITIONAL);
+		Iterator<DictionaryEntryBlock> compounds = 
+				mResult.iterator(WordReferenceDictionary.CATEGORY_COMPOUND);
 
-		term.setText(mResult.term);
-		translations.setText(mResult.entries.toString());
+		mAdapters = new ListAdapter[2];
+		mFragments = new ListFragment[2];
+		
+		if (principal.hasNext() && additional.hasNext()) {
+			MergeAdapter adapter = new MergeAdapter();
+			DictionaryEntryListAdapter adapter1 = 
+				new DictionaryEntryListAdapter(this, mResult.term, principal);
+			DictionaryEntryListAdapter adapter2 = 
+				new DictionaryEntryListAdapter(this, mResult.term, additional);
+
+			adapter1.setAdditionalItems(adapter2.getCount());
+			adapter2.setAdditionalItems(adapter1.getCount());
+			adapter2.setOffset(adapter1.getCount());
+			
+			TextView header = (TextView) LayoutInflater.from(this)
+				.inflate(R.layout.section_header, null);
+			header.setText(R.string.category_principal_header);
+			adapter.addView(header);
+			adapter.addAdapter(adapter1);
+			
+			header = (TextView) LayoutInflater.from(this)
+				.inflate(R.layout.section_header, null);
+			header.setText(R.string.category_additional_header);
+			adapter.addView(header);
+			adapter.addAdapter(adapter2);
+			
+			mAdapters[0] = adapter;
+		} else if (principal.hasNext() || additional.hasNext()) {
+			if (!compounds.hasNext()) {
+				mAdapters[0] = new DictionaryEntryListAdapter(this, mResult);
+			} else if (principal.hasNext()) {
+				mAdapters[0] = new DictionaryEntryListAdapter(this, mResult.term, principal);
+			} else {
+				// very rare situation, but...
+				mAdapters[0] = new DictionaryEntryListAdapter(this, mResult.term, additional);
+			}
+		} else {
+			mAdapters[0] = new DictionaryEntryListAdapter(this, mResult.term, 
+					mResult.iterator(LanguageDictionary.CATEGORY_DEFAULT));
+		}
+		
+		if (compounds.hasNext()) {
+			mAdapters[1] = new DictionaryEntryListAdapter(this, mResult.term, compounds);
+			if (mAdapters[0] != null) {
+				DictionaryEntryListAdapter adapter = (DictionaryEntryListAdapter) mAdapters[1];
+				adapter.setOffset(mAdapters[0].getCount());
+				adapter.setAdditionalItems(mAdapters[0].getCount());
+			}
+		}
+
+		if (mAdapters[0] != null && mAdapters[1] != null) {
+			ActionBar actionBar = getSupportActionBar();
+			actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+			ActionBar.Tab tab1 = actionBar
+					.newTab()
+					.setText(R.string.category_single_header)
+					.setTabListener(this);
+			ActionBar.Tab tab2 = actionBar
+					.newTab()
+					.setText(R.string.category_compound_header)
+					.setTabListener(this);
+			actionBar.addTab(tab1);
+			actionBar.addTab(tab2);
+		} else {
+			ListView list = (ListView) findViewById(R.id.dictionary_entries);
+			list.setAdapter(mAdapters[0]);
+		}
 	}
 	
 	public void onTaskComplete(DictionaryResult result, ApplicationError error) {
 		mResult = result;
+		mError = error;
 
 		if (result != null) {
 			loadResult();
@@ -381,5 +566,35 @@ public class ResultActivity extends SherlockFragmentActivity
 		if (mDictionary == null) {
 			showErrorDisplay(ApplicationError.DICT_NOT_SPECIFIED);
 		}
+	}
+
+	@Override
+	public void onTabSelected(Tab tab, FragmentTransaction ft) {
+		// When the given tab is selected, show the tab contents in the
+	    // container view.
+		int position = tab.getPosition();
+		if (mFragments[position] == null) {
+			mFragments[position] = new ListFragment();
+			mFragments[position].setListAdapter(mAdapters[position]);
+			ft.add(R.id.content, mFragments[position]);
+		} 
+		if (mCurSelectedTab != -1) {
+			ft.hide(mFragments[mCurSelectedTab]);
+		}
+		ft.show(mFragments[position]);
+	//	ft.commit();
+		mCurSelectedTab = position;
+	}
+
+	@Override
+	public void onTabUnselected(Tab tab, FragmentTransaction ft) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onTabReselected(Tab tab, FragmentTransaction ft) {
+		// TODO Auto-generated method stub
+		
 	}
 }
